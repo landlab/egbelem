@@ -11,6 +11,7 @@ import numpy as np
 from landlab import RasterModelGrid, HexModelGrid
 from landlab.core import load_params
 from landlab.components import ExtendedGravelBedrockEroder, PriorityFloodFlowRouter, FlowAccumulator
+from landlab.components.soil_grading import SoilGrading
 
 from model_base import LandlabModel
 
@@ -73,6 +74,8 @@ class EgbeLem(LandlabModel):
             "alpha": 0.68,
             "tau_c_bedrock": 10.,
             "d_min": 0.1,
+            "meansizes": [0.1],
+            "grains_weight": [1000.],
             "plucking_by_tools_flag": True
         },
     }
@@ -128,6 +131,14 @@ class EgbeLem(LandlabModel):
 
         # Instantiate and initialize components: fluvial transport, erosion, deposition
         egbe_params = params["fluvial"]
+        self.soil_grader = SoilGrading(
+            self.grid,
+            meansizes=egbe_params['grain_sizes'],
+            grains_weight=egbe_params['init_grains_weight'],
+            phi=egbe_params['porosity'],
+            soil_density=egbe_params['rho_sed']
+        )
+
         self.eroder = ExtendedGravelBedrockEroder(
             self.grid,
             intermittency_factor=egbe_params["intermittency_factor"],

@@ -18,11 +18,20 @@ sim_id_to_run = int(14)
 start_new_flag = int(1)
 
 # Load the simulation info
-with open(f'./Inputs/sim_num_{sim_id_to_run}.pkl', 'rb') as f:
+#GT with open(f'./Inputs/sim_num_{sim_id_to_run}.pkl', 'rb') as f:
+with open(f'sim_num_{sim_id_to_run}.pkl', 'rb') as f:
     loaded_dict = pickle.load(f)
 
 # GT temporary, for testing
 loaded_dict["total_time"] = 100001
+for item in loaded_dict.keys():
+    try:
+        ilen = len(item)
+    except:
+        ilen = 1
+    if ilen < 100:
+        print(item, loaded_dict[item])
+exit()
 
 # Init components
 grid = loaded_dict['grid']
