@@ -74,8 +74,8 @@ class EgbeLem(LandlabModel):
             "alpha": 0.68,
             "tau_c_bedrock": 10.,
             "d_min": 0.1,
-            "meansizes": [0.1],
-            "grains_weight": [1000.],
+            "grain_sizes": [0.1],
+            "init_grains_weight": [1000.],
             "plucking_by_tools_flag": True
         },
     }
@@ -135,7 +135,7 @@ class EgbeLem(LandlabModel):
             self.grid,
             meansizes=egbe_params['grain_sizes'],
             grains_weight=egbe_params['init_grains_weight'],
-            phi=egbe_params['porosity'],
+            phi=egbe_params['sediment_porosity'],
             soil_density=egbe_params['rho_sed']
         )
 
