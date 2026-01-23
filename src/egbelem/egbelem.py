@@ -10,7 +10,11 @@ import sys
 import numpy as np
 from landlab import RasterModelGrid, HexModelGrid
 from landlab.core import load_params
-from landlab.components import ExtendedGravelBedrockEroder, PriorityFloodFlowRouter, FlowAccumulator
+from landlab.components import (
+    ExtendedGravelBedrockEroder,
+    PriorityFloodFlowRouter,
+    FlowAccumulator,
+)
 from landlab.components.soil_grading import SoilGrading
 
 from model_base import LandlabModel
@@ -31,10 +35,10 @@ class EgbeLem(LandlabModel):
         },
         "clock": {"start": 0.0, "stop": 10000.0, "step": 10.0},
         "output": {
-            "plot_times": 2000.0,  # float or list
+            "plot_times": 2500.0,  # float or list
             "save_times": 10000.0,  # float or list
             "report_times": 1000.0,  # float or list
-            "save_path": "bigantr_run",
+            "save_path": "egbe_run",
             "clobber": True,
             "fields": None,
             "plot_to_file": True,
@@ -64,19 +68,19 @@ class EgbeLem(LandlabModel):
             "abrasion_coefficients": [1.0e-4],
             "bedrock_abrasion_coefficient": 1.0e-4,
             "fractions_from_plucking": [0.5],
-            "rho_sed": 2650.,
-            "rho_water": 1000.,
+            "rho_sed": 2650.0,
+            "rho_water": 1000.0,
             "use_fixed_width": True,
             "fixed_width_coeff": 0.002,
             "fixed_width_expt": 0.5,
             "mannings_n": 0.05,
             "tau_star_c_median": 0.0495,
             "alpha": 0.68,
-            "tau_c_bedrock": 10.,
+            "tau_c_bedrock": 10.0,
             "d_min": 0.1,
             "grain_sizes": [0.1],
-            "init_grains_weight": [1000.],
-            "plucking_by_tools_flag": True
+            "init_grains_weight": [1000.0],
+            "plucking_by_tools_flag": True,
         },
     }
 
@@ -98,12 +102,17 @@ class EgbeLem(LandlabModel):
             self.grid.at_node["soil__depth"][:] = ic_params["initial_sed_thickness"]
         if not ("bedrock__elevation" in self.grid.at_node.keys()):
             self.grid.add_zeros("bedrock__elevation", at="node")
-            self.grid.at_node["bedrock__elevation"][:] = self.grid.at_node["topographic__elevation"] - self.grid.at_node["soil__depth"]
+            self.grid.at_node["bedrock__elevation"][:] = (
+                self.grid.at_node["topographic__elevation"]
+                - self.grid.at_node["soil__depth"]
+            )
         self.topo = self.grid.at_node["topographic__elevation"]
         self.sed = self.grid.at_node["soil__depth"]
         self.rock = self.grid.at_node["bedrock__elevation"]
         self.topo[self.grid.core_nodes] = ic_params["initial_topo"]
-        self.rock[self.grid.core_nodes] = self.topo[self.grid.core_nodes] - self.sed[self.grid.core_nodes]
+        self.rock[self.grid.core_nodes] = (
+            self.topo[self.grid.core_nodes] - self.sed[self.grid.core_nodes]
+        )
 
         # Store parameters
         self.uplift_rate = params["baselevel"]["uplift_rate"]
@@ -119,13 +128,13 @@ class EgbeLem(LandlabModel):
                 depression_handler=flow_params["depression_handler"],
                 epsilon=flow_params["epsilon"],
                 accumulate_flow=True,
-                runoff_rate=flow_params["bankfull_runoff_rate"]
+                runoff_rate=flow_params["bankfull_runoff_rate"],
             )
         else:
             self.router = FlowAccumulator(
                 self.grid,
                 runoff_rate=flow_params["bankfull_runoff_rate"],
-                depression_finder='DepressionFinderAndRouter'
+                depression_finder="DepressionFinderAndRouter",
             )
         print("BFR", flow_params["bankfull_runoff_rate"])
 
@@ -133,10 +142,10 @@ class EgbeLem(LandlabModel):
         egbe_params = params["fluvial"]
         self.soil_grader = SoilGrading(
             self.grid,
-            meansizes=egbe_params['grain_sizes'],
-            grains_weight=egbe_params['init_grains_weight'],
-            phi=egbe_params['sediment_porosity'],
-            soil_density=egbe_params['rho_sed']
+            meansizes=egbe_params["grain_sizes"],
+            grains_weight=egbe_params["init_grains_weight"],
+            phi=egbe_params["sediment_porosity"],
+            soil_density=egbe_params["rho_sed"],
         )
 
         self.eroder = ExtendedGravelBedrockEroder(
@@ -150,8 +159,8 @@ class EgbeLem(LandlabModel):
             abrasion_coefficients=egbe_params["abrasion_coefficients"],
             bedrock_abrasion_coefficient=egbe_params["bedrock_abrasion_coefficient"],
             fractions_from_plucking=egbe_params["fractions_from_plucking"],
-            rho_sed=2650.,
-            rho_water=1000.,
+            rho_sed=2650.0,
+            rho_water=1000.0,
             use_fixed_width=egbe_params["use_fixed_width"],
             fixed_width_coeff=egbe_params["fixed_width_coeff"],
             fixed_width_expt=egbe_params["fixed_width_expt"],
@@ -160,20 +169,20 @@ class EgbeLem(LandlabModel):
             alpha=egbe_params["alpha"],
             tau_c_bedrock=egbe_params["tau_c_bedrock"],
             d_min=egbe_params["d_min"],
-            plucking_by_tools_flag=egbe_params["plucking_by_tools_flag"]
+            plucking_by_tools_flag=egbe_params["plucking_by_tools_flag"],
         )
 
     def update(self, dt):
         """Advance the model by one time step of duration dt."""
-        #print("BL Update here", self.current_time, dt, self.uplift_rate)
-        #print(" topo before uplift", self.topo[self.grid.core_nodes])
+        # print("BL Update here", self.current_time, dt, self.uplift_rate)
+        # print(" topo before uplift", self.topo[self.grid.core_nodes])
         dz = self.uplift_rate * dt
         self.topo[self.grid.core_nodes] += dz
         self.rock[self.grid.core_nodes] += dz
-        #print(" topo after uplift but before GBE", self.topo[self.grid.core_nodes])
+        # print(" topo after uplift but before GBE", self.topo[self.grid.core_nodes])
         self.router.run_one_step()
         self.eroder.run_one_step(dt)
-        #print(" topo after GBE", self.topo[self.grid.core_nodes])
+        # print(" topo after GBE", self.topo[self.grid.core_nodes])
         self.current_time += dt
 
 
@@ -181,6 +190,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         params = load_params(sys.argv[1])
     else:
+        print("Running EgbeLem with default parameters")
         params = {}
     elem = EgbeLem(params)
     elem.run()
