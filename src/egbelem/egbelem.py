@@ -33,11 +33,11 @@ class EgbeLem(LandlabModel):
                 ],
             },
         },
-        "clock": {"start": 0.0, "stop": 10000.0, "step": 10.0},
+        "clock": {"start": 0.0, "stop": 1000.0, "step": 10.0},
         "output": {
-            "plot_times": 2500.0,  # float or list
-            "save_times": 10000.0,  # float or list
-            "report_times": 1000.0,  # float or list
+            "plot_times": 250.0,  # float or list
+            "save_times": 1000.0,  # float or list
+            "report_times": 100.0,  # float or list
             "save_path": "egbe_run",
             "clobber": True,
             "fields": None,
