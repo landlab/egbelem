@@ -2,7 +2,7 @@ grid:
   source: create
   create_grid: 
     RasterModelGrid: 
-      shape: (31, 31)
+      shape: [31, 31]
       xy_spacing: 1000.0
 clock: 
   start: 0.0
