@@ -47,6 +47,7 @@ class EgbeLem(LandlabModel):
             "initial_sed_thickness": 1.0,
             "random_topo_amp": 10.0,
             "initial_topo": 0.0,
+            "init_grains_weight": 1.0 * 2650.0 * (1.0 - 1.0 / 3.0), 
         },
         "baselevel": {
             "uplift_rate": 0.0001,
@@ -79,7 +80,6 @@ class EgbeLem(LandlabModel):
             "tau_c_bedrock": 10.0,
             "d_min": 0.1,
             "grain_sizes": [0.1],
-            "init_grains_weight": [1000.0],
             "plucking_by_tools_flag": True,
         },
     }
@@ -87,6 +87,9 @@ class EgbeLem(LandlabModel):
     def __init__(self, params={}, input_file=None):
         """Initialize the model."""
         super().__init__(params, input_file)
+
+        # Store global dt
+        self._global_dt = params["clock"]["step"]
 
         # Set up grid fields
         ic_params = params["initial_conditions"]
@@ -100,6 +103,18 @@ class EgbeLem(LandlabModel):
         if not ("soil__depth" in self.grid.at_node.keys()):
             self.grid.add_zeros("soil__depth", at="node")
             self.grid.at_node["soil__depth"][:] = ic_params["initial_sed_thickness"]
+
+        try:
+            np.testing.assert_almost_equal(ic_params["init_grains_weight"]  / 
+                                           ((1-params["fluvial"]["sediment_porosity"]) * params["fluvial"]["rho_sed"]), 
+                                           ic_params["initial_sed_thickness"], 
+                                           decimal=3)
+        except AssertionError as e:
+            # Overwrite grains_weight to match the soil depth
+            ic_params["init_grains_weight"] = (ic_params["initial_sed_thickness"] * params["fluvial"]["rho_sed"] *
+                                                          (1-params["fluvial"]["sediment_porosity"]))
+            print(f"init_grains_weight is overwritten to match initial_sed_thickness")
+
         if not ("bedrock__elevation" in self.grid.at_node.keys()):
             self.grid.add_zeros("bedrock__elevation", at="node")
             self.grid.at_node["bedrock__elevation"][:] = (
@@ -143,7 +158,7 @@ class EgbeLem(LandlabModel):
         self.soil_grader = SoilGrading(
             self.grid,
             meansizes=egbe_params["grain_sizes"],
-            grains_weight=egbe_params["init_grains_weight"],
+            grains_weight=ic_params["init_grains_weight"],
             phi=egbe_params["sediment_porosity"],
             soil_density=egbe_params["rho_sed"],
         )
