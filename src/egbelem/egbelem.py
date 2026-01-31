@@ -159,8 +159,8 @@ class EgbeLem(LandlabModel):
             abrasion_coefficients=egbe_params["abrasion_coefficients"],
             bedrock_abrasion_coefficient=egbe_params["bedrock_abrasion_coefficient"],
             fractions_from_plucking=egbe_params["fractions_from_plucking"],
-            rho_sed=2650.0,
-            rho_water=1000.0,
+            rho_sed=egbe_params["rho_sed"],
+            rho_water=egbe_params["rho_water"],
             use_fixed_width=egbe_params["use_fixed_width"],
             fixed_width_coeff=egbe_params["fixed_width_coeff"],
             fixed_width_expt=egbe_params["fixed_width_expt"],
@@ -172,8 +172,11 @@ class EgbeLem(LandlabModel):
             plucking_by_tools_flag=egbe_params["plucking_by_tools_flag"],
         )
 
-    def update(self, dt):
+    def update(self, dt=None):
         """Advance the model by one time step of duration dt."""
+
+        if dt is None:
+            dt = self._global_dt
         # print("BL Update here", self.current_time, dt, self.uplift_rate)
         # print(" topo before uplift", self.topo[self.grid.core_nodes])
         dz = self.uplift_rate * dt
