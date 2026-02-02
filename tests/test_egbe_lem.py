@@ -33,8 +33,25 @@ def test_combo_specified_and_default_params():
     assert_equal(model.current_time, 300.)
     assert_equal(model.uplift_rate, model.DEFAULT_PARAMS["baselevel"]["uplift_rate"])
 
+def test_with_hex_grid():
+    params = {
+        "grid": {
+            "source": "create",
+            "create_grid": {
+                "HexModelGrid": [
+                    (3, 3),
+                    {"spacing": 1000.0},
+                ],
+            },
+        },
+    }
+    model = EgbeLem(params=params)
+    model.run()
+
+
 
 if __name__ == "__main__":
+    test_with_hex_grid()
     test_combo_specified_and_default_params()
     test_run_with_default_params_cl()
     test_run_with_default_params()

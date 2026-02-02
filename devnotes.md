@@ -10,7 +10,7 @@
 - [x] When run as object, have function to run the whole thing start to finish
 - [x] When run as object, also allow "piecewise" initialization, run for a period of time, query outputs/fields, run again for an additional period of time, etc.
 - [x] if a parameter is omitted from input file or dict, a default will be used
-- [ ] Select a raster or hex grid
+- [x] Select a raster or hex grid
 - [ ] When imported into Python, have option to pass parameters as a dict (which allows having some parameters be spatially varying)
 - [ ] Output to NetCDF (raster) and VTK (hex or raster) with user control on fields to be included
 - [ ] Reproduce Yuval's example (sim_num_14.pkl)
