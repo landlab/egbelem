@@ -8,7 +8,7 @@
 - [x] Run start-to-finish from command line with input file
 - [x] Import as object and run in a script or notebook
 - [x] When run as object, have function to run the whole thing start to finish
-- [ ] When run as object, also allow "piecewise" initialization, run for a period of time, query outputs/fields, run again for an additional period of time, etc.
+- [x] When run as object, also allow "piecewise" initialization, run for a period of time, query outputs/fields, run again for an additional period of time, etc.
 - [ ] if a parameter is omitted from input file or dict, a default will be used
 - [ ] Select a raster or hex grid
 - [ ] When imported into Python, have option to pass parameters as a dict (which allows having some parameters be spatially varying)
