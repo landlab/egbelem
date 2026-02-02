@@ -24,8 +24,18 @@ def test_run_pause_continue():
     model.update_until(400., dt=100.)
     assert_equal(model.current_time, 400.)
 
+def test_combo_specified_and_default_params():
+    model = EgbeLem(params = {"clock": {"stop": 400.}})
+    model.run()
+    assert_equal(model.current_time, 400.)
+    model = EgbeLem(input_file="egbe_one_param.yaml")
+    model.run()
+    assert_equal(model.current_time, 300.)
+    assert_equal(model.uplift_rate, model.DEFAULT_PARAMS["baselevel"]["uplift_rate"])
+
 
 if __name__ == "__main__":
+    test_combo_specified_and_default_params()
     test_run_with_default_params_cl()
     test_run_with_default_params()
     test_run_pause_continue()
