@@ -48,13 +48,16 @@ def merge_user_and_default_params(user_params, default_params):
     >>> u["grid"]
     {'RasterModelGrid': []}
     """
-    print(user_params)
+    print("DP keys, UP keys", default_params.keys(), user_params.keys())
     for k in default_params.keys():
-        if k in default_params:
-            if k not in user_params.keys():
-                user_params[k] = default_params[k]
-            elif isinstance(user_params[k], dict) and k != "grid":
-                merge_user_and_default_params(user_params[k], default_params[k])
+        #if k in default_params:
+        if k not in user_params.keys():
+            print("Adding", k, "to UP")
+            user_params[k] = default_params[k]
+        elif isinstance(user_params[k], dict) and k != "create_grid":
+            print("Merging", k)
+            merge_user_and_default_params(user_params[k], default_params[k])
+    print("At end of merge call, UP is", user_params)
 
 
 def get_or_create_node_field(grid, name, dtype="float64"):
@@ -138,6 +141,7 @@ class LandlabModel:
         self.setup_grid(params["grid"])
         self.setup_for_output(params)
         self.setup_run_control(params["clock"])
+        return params
 
     def setup_grid(self, grid_params: dict) -> None:
         """Load or create the grid.

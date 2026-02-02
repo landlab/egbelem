@@ -89,7 +89,7 @@ class EgbeLem(LandlabModel):
         if (not isinstance(params, dict)) or (not isinstance(input_file, str)):
             print("params if given must be dict & input_file if given must be str")
             raise(TypeError)
-        super().__init__(params, input_file)
+        params = super().__init__(params, input_file)
 
         # Set up grid fields
         ic_params = params["initial_conditions"]
