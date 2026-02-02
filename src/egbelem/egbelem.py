@@ -47,6 +47,7 @@ class EgbeLem(LandlabModel):
             "initial_sed_thickness": 1.0,
             "random_topo_amp": 10.0,
             "initial_topo": 0.0,
+            "init_grains_weight": 1.0 * 2650.0 * (1.0 - 1.0 / 3.0), 
         },
         "baselevel": {
             "uplift_rate": 0.0001,
@@ -79,7 +80,6 @@ class EgbeLem(LandlabModel):
             "tau_c_bedrock": 10.0,
             "d_min": 0.1,
             "grain_sizes": [0.1],
-            "init_grains_weight": [1000.0],
             "plucking_by_tools_flag": True,
         },
     }
@@ -90,6 +90,9 @@ class EgbeLem(LandlabModel):
             print("params if given must be dict & input_file if given must be str")
             raise(TypeError)
         params = super().__init__(params, input_file)
+
+        # Store global dt
+        self._global_dt = params["clock"]["step"]
 
         # Set up grid fields
         ic_params = params["initial_conditions"]
@@ -103,6 +106,18 @@ class EgbeLem(LandlabModel):
         if not ("soil__depth" in self.grid.at_node.keys()):
             self.grid.add_zeros("soil__depth", at="node")
             self.grid.at_node["soil__depth"][:] = ic_params["initial_sed_thickness"]
+
+        try:
+            np.testing.assert_almost_equal(ic_params["init_grains_weight"]  / 
+                                           ((1-params["fluvial"]["sediment_porosity"]) * params["fluvial"]["rho_sed"]), 
+                                           ic_params["initial_sed_thickness"], 
+                                           decimal=3)
+        except AssertionError as e:
+            # Overwrite grains_weight to match the soil depth
+            ic_params["init_grains_weight"] = (ic_params["initial_sed_thickness"] * params["fluvial"]["rho_sed"] *
+                                                          (1-params["fluvial"]["sediment_porosity"]))
+            print(f"init_grains_weight is overwritten to match initial_sed_thickness")
+
         if not ("bedrock__elevation" in self.grid.at_node.keys()):
             self.grid.add_zeros("bedrock__elevation", at="node")
             self.grid.at_node["bedrock__elevation"][:] = (
@@ -146,7 +161,7 @@ class EgbeLem(LandlabModel):
         self.soil_grader = SoilGrading(
             self.grid,
             meansizes=egbe_params["grain_sizes"],
-            grains_weight=egbe_params["init_grains_weight"],
+            grains_weight=ic_params["init_grains_weight"],
             phi=egbe_params["sediment_porosity"],
             soil_density=egbe_params["rho_sed"],
         )
@@ -162,8 +177,8 @@ class EgbeLem(LandlabModel):
             abrasion_coefficients=egbe_params["abrasion_coefficients"],
             bedrock_abrasion_coefficient=egbe_params["bedrock_abrasion_coefficient"],
             fractions_from_plucking=egbe_params["fractions_from_plucking"],
-            rho_sed=2650.0,
-            rho_water=1000.0,
+            rho_sed=egbe_params["rho_sed"],
+            rho_water=egbe_params["rho_water"],
             use_fixed_width=egbe_params["use_fixed_width"],
             fixed_width_coeff=egbe_params["fixed_width_coeff"],
             fixed_width_expt=egbe_params["fixed_width_expt"],
@@ -175,8 +190,11 @@ class EgbeLem(LandlabModel):
             plucking_by_tools_flag=egbe_params["plucking_by_tools_flag"],
         )
 
-    def update(self, dt):
+    def update(self, dt=None):
         """Advance the model by one time step of duration dt."""
+
+        if dt is None:
+            dt = self._global_dt
         # print("BL Update here", self.current_time, dt, self.uplift_rate)
         # print(" topo before uplift", self.topo[self.grid.core_nodes])
         dz = self.uplift_rate * dt
