@@ -13,7 +13,7 @@ def test_run_with_default_params_cl():
 def test_run_with_default_params():
     model = EgbeLem()
     model.run()
-    model = EgbeLem("egbedefaults.yaml")
+    model = EgbeLem(input_file="../src/egbelem/egbedefaults.yaml")
     model.run()
 
 

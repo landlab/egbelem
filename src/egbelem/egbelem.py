@@ -17,7 +17,7 @@ from landlab.components import (
 )
 from landlab.components.soil_grading import SoilGrading
 
-from model_base import LandlabModel
+from model_base import LandlabModel, verify_input_file_and_load_params
 
 
 class EgbeLem(LandlabModel):
@@ -84,8 +84,11 @@ class EgbeLem(LandlabModel):
         },
     }
 
-    def __init__(self, params={}, input_file=None):
+    def __init__(self, params: dict={}, input_file: str="") -> None:
         """Initialize the model."""
+        if (not isinstance(params, dict)) or (not isinstance(input_file, str)):
+            print("params if given must be dict & input_file if given must be str")
+            raise(TypeError)
         super().__init__(params, input_file)
 
         # Set up grid fields
@@ -188,15 +191,10 @@ class EgbeLem(LandlabModel):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        try:
-            f = open(sys.argv[1], "r")
-            f.close()
-            print("Running EgbeLem with parameters in", sys.argv[1])
-            params = load_params(sys.argv[1])
-        except FileNotFoundError:
-            raise
+        print("Running EgbeLem with parameters in", sys.argv[1])
+        params = verify_input_file_and_load_params(sys.argv[1])
     else:
         print("Running EgbeLem with default parameters")
         params = {}
-    elem = EgbeLem(params)
+    elem = EgbeLem(params=params)
     elem.run()

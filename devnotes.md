@@ -5,7 +5,7 @@
 
 ### Must have
 
-- [ ] Run start-to-finish from command line with input file
+- [x] Run start-to-finish from command line with input file
 - [x] Import as object and run in a script or notebook
 - [x] When run as object, have function to run the whole thing start to finish
 - [ ] When run as object, also allow "piecewise" initialization, run for a period of time, query outputs/fields, run again for an additional period of time, etc.

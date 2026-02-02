@@ -13,6 +13,23 @@ from landlab import ModelGrid, create_grid, load_params
 from landlab.io.native_landlab import load_grid, save_grid
 
 
+def verify_input_file_and_load_params(input_file):
+    """
+    If the named file exists, read it and return a dict of parameters.
+    Otherwise, raise FileNotFoundError.
+
+    Note: this is meant to be a temporary fn because currently
+    load_params does not handle missing files gracefully. Once it does,
+    then this could simply be replaced by load_params.
+    """
+    try:
+        f = open(input_file, "r")
+        f.close()
+        params = load_params(input_file)
+        return params
+    except FileNotFoundError:
+        raise
+
 def merge_user_and_default_params(user_params, default_params):
     """Merge default parameters into the user-parameter dictionary, adding
     defaults where user values are absent.
@@ -31,6 +48,7 @@ def merge_user_and_default_params(user_params, default_params):
     >>> u["grid"]
     {'RasterModelGrid': []}
     """
+    print(user_params)
     for k in default_params.keys():
         if k in default_params:
             if k not in user_params.keys():
@@ -112,31 +130,16 @@ class LandlabModel:
         },
     }
 
-    def __init__(self, params={}, input_file=None):
+    def __init__(self, params: dict={}, input_file: str="") -> None:
         """Initialize the model."""
-        if input_file is not None:
-            params = load_params(params)
+        if len(input_file) > 0:
+            params = verify_input_file_and_load_params(input_file)
         merge_user_and_default_params(params, self.DEFAULT_PARAMS)
         self.setup_grid(params["grid"])
         self.setup_for_output(params)
         self.setup_run_control(params["clock"])
 
-    def verify_input_file_and_load_params(self, input_file):
-        """
-        If the named file exists, read it and return a dict of parameters.
-        Otherwise, raise FileNotFoundError.
-
-        Note: currently load_params does not handle missing files gracefully?
-        """
-        try:
-            f = open(input_file, "r")
-            f.close()
-            params = load_params(input_file)
-            return params
-        except FileNotFoundError:
-            raise
-
-    def setup_grid(self, grid_params):
+    def setup_grid(self, grid_params: dict) -> None:
         """Load or create the grid.
 
         Examples
