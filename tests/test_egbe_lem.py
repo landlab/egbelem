@@ -3,6 +3,7 @@ test_egbe_lem.py: external unit tests for EgbeLem and associated code.
 """
 
 import os
+import numpy as np
 from numpy.testing import assert_equal
 from egbelem import EgbeLem
 
@@ -48,9 +49,37 @@ def test_with_hex_grid():
     model = EgbeLem(params=params)
     model.run()
 
+def test_pass_fields():
+    frac_from_pluck = np.ones((12, 1))
+    frac_from_pluck[:6, 0] = 0.1
+    params = {
+        "grid": {
+            "source": "create",
+            "create_grid": {
+                "RasterModelGrid": [
+                    (4, 3),
+                    {"xy_spacing": 1000.0},
+                ],
+            },
+        },
+        "baselevel": {
+            "uplift_rate": np.array([1, 2]) # 2 core nodes
+        },
+        "fluvial": {
+            "plucking_coefficient": 1.0e-4 * np.array([10, 10, 10, 10, 10, 10, 1, 1, 1, 1, 1, 1]),
+            "bedrock_abrasion_coefficient": 1.0e-5 * np.array([10, 10, 10, 10, 10, 10, 1, 1, 1, 1, 1, 1]),
+            "fractions_from_plucking": frac_from_pluck
+        }
+    }
+    model = EgbeLem(params=params)
+    model.run()
+    
+
+
 
 
 if __name__ == "__main__":
+    test_pass_fields()
     test_with_hex_grid()
     test_combo_specified_and_default_params()
     test_run_with_default_params_cl()
