@@ -5,6 +5,7 @@ test_egbe_lem.py: external unit tests for EgbeLem and associated code.
 import os
 import numpy as np
 from numpy.testing import assert_equal
+from landlab import RasterModelGrid
 from egbelem import EgbeLem
 
 
@@ -73,12 +74,40 @@ def test_pass_fields():
     }
     model = EgbeLem(params=params)
     model.run()
+
+def test_run_with_predefined_grid_and_fields():
     
+    grid = RasterModelGrid((3, 3), xy_spacing=100.0)
+    elev = grid.add_zeros("topographic__elevation", at="node")
+    elev[4] = 4.4
+    sed = grid.add_zeros("soil__depth", at="node")
+    sed[4] = 1.1
+
+    params = {
+        "grid": {
+            "source": "grid_object",
+            "grid_object": grid
+        },
+        "clock": {
+            "stop": 100.
+        },
+        "initial_conditions": {
+            "use_field_for_initial_topo": True,
+            "use_field_for_initial_sed": True
+        }
+    }
+
+    model = EgbeLem(params=params)
+    assert_equal(model.grid.at_node["topographic__elevation"][4], 4.4)
+    assert_equal(model.grid.at_node["soil__depth"][4], 1.1)
+    assert_equal(model.grid.at_node["bedrock__elevation"][4], 3.3)
+    model.run()
 
 
 
 
 if __name__ == "__main__":
+    test_run_with_predefined_grid_and_fields()
     test_pass_fields()
     test_with_hex_grid()
     test_combo_specified_and_default_params()

@@ -44,10 +44,12 @@ class EgbeLem(LandlabModel):
             "plot_to_file": True,
         },
         "initial_conditions": {
-            "initial_sed_thickness": 1.0,
-            "random_topo_amp": 10.0,
+            "use_field_for_initial_topo": False,
             "initial_topo": 0.0,
-            "init_grains_weight": 1.0 * 2650.0 * (1.0 - 1.0 / 3.0), 
+            "random_topo_amp": 10.0,
+            "use_field_for_initial_sed": False,
+            "initial_sed_thickness": 1.0,
+            "init_grains_weight": 1.0 * 2650.0 * (1.0 - 1.0 / 3.0),
         },
         "baselevel": {
             "uplift_rate": 0.0001,
@@ -84,11 +86,11 @@ class EgbeLem(LandlabModel):
         },
     }
 
-    def __init__(self, params: dict={}, input_file: str="") -> None:
+    def __init__(self, params: dict = {}, input_file: str = "") -> None:
         """Initialize the model."""
         if (not isinstance(params, dict)) or (not isinstance(input_file, str)):
             print("params if given must be dict & input_file if given must be str")
-            raise(TypeError)
+            raise (TypeError)
         params = super().__init__(params, input_file)
 
         # Store global dt
@@ -98,39 +100,49 @@ class EgbeLem(LandlabModel):
         ic_params = params["initial_conditions"]
         if not ("topographic__elevation" in self.grid.at_node.keys()):
             self.grid.add_zeros("topographic__elevation", at="node")
-            self.grid.at_node["topographic__elevation"][
-                self.grid.core_nodes
-            ] += ic_params["random_topo_amp"] * np.random.rand(
-                self.grid.number_of_core_nodes
-            )
+            if ic_params["use_field_for_initial_topo"]:
+                print(
+                    "Warning: you selected the option use_field_for_initial_topo but no field was provided. Using defaults instead."
+                )
+                ic_params["use_field_for_initial_topo"] = False
         if not ("soil__depth" in self.grid.at_node.keys()):
             self.grid.add_zeros("soil__depth", at="node")
             self.grid.at_node["soil__depth"][:] = ic_params["initial_sed_thickness"]
 
-        try:
-            np.testing.assert_almost_equal(ic_params["init_grains_weight"]  / 
-                                           ((1-params["fluvial"]["sediment_porosity"]) * params["fluvial"]["rho_sed"]), 
-                                           ic_params["initial_sed_thickness"], 
-                                           decimal=3)
-        except AssertionError as e:
-            # Overwrite grains_weight to match the soil depth
-            ic_params["init_grains_weight"] = (ic_params["initial_sed_thickness"] * params["fluvial"]["rho_sed"] *
-                                                          (1-params["fluvial"]["sediment_porosity"]))
-            print(f"init_grains_weight is overwritten to match initial_sed_thickness")
-
         if not ("bedrock__elevation" in self.grid.at_node.keys()):
             self.grid.add_zeros("bedrock__elevation", at="node")
-            self.grid.at_node["bedrock__elevation"][:] = (
-                self.grid.at_node["topographic__elevation"]
-                - self.grid.at_node["soil__depth"]
-            )
         self.topo = self.grid.at_node["topographic__elevation"]
         self.sed = self.grid.at_node["soil__depth"]
         self.rock = self.grid.at_node["bedrock__elevation"]
-        self.topo[self.grid.core_nodes] = ic_params["initial_topo"]
+        if not ic_params["use_field_for_initial_topo"]:
+            self.topo[self.grid.core_nodes] = ic_params["initial_topo"] + ic_params[
+                "random_topo_amp"
+            ] * np.random.rand(self.grid.number_of_core_nodes)
+        if not ic_params["use_field_for_initial_sed"]:
+            self.sed[self.grid.core_nodes] = ic_params["initial_sed_thickness"]
         self.rock[self.grid.core_nodes] = (
             self.topo[self.grid.core_nodes] - self.sed[self.grid.core_nodes]
         )
+        try: # NOTE: needs to handle case of sed thickness coming as field
+            np.testing.assert_almost_equal(
+                ic_params["init_grains_weight"]
+                / (
+                    (1 - params["fluvial"]["sediment_porosity"])
+                    * params["fluvial"]["rho_sed"]
+                ),
+                ic_params["initial_sed_thickness"],
+                decimal=3,
+            )
+        except AssertionError:  # as e:
+            # Overwrite grains_weight to match the soil depth
+            ic_params["init_grains_weight"] = (
+                ic_params["initial_sed_thickness"]
+                * params["fluvial"]["rho_sed"]
+                * (1 - params["fluvial"]["sediment_porosity"])
+            )
+            print(
+                f"Warning: overriding init_grains_weight to match initial_sed_thickness"
+            )
 
         # Store parameters
         self.uplift_rate = params["baselevel"]["uplift_rate"]
@@ -189,6 +201,8 @@ class EgbeLem(LandlabModel):
             d_min=egbe_params["d_min"],
             plucking_by_tools_flag=egbe_params["plucking_by_tools_flag"],
         )
+        print("ei FROG", self.grid.at_node["topographic__elevation"])
+
 
     def update(self, dt=None):
         """Advance the model by one time step of duration dt."""
