@@ -49,7 +49,8 @@ class EgbeLem(LandlabModel):
             "random_topo_amp": 10.0,
             "use_field_for_initial_sed": False,
             "initial_sed_thickness": 1.0,
-            "init_grains_weight": 1.0 * 2650.0 * (1.0 - 1.0 / 3.0),
+            "use_field_for_initial_sed_classes": False,
+            "init_grains_weight": np.array([1.0 * 2650.0 * (1.0 - 1.0 / 3.0)]),
         },
         "baselevel": {
             "uplift_rate": 0.0001,
@@ -105,25 +106,60 @@ class EgbeLem(LandlabModel):
                     "Warning: you selected the option use_field_for_initial_topo but no field was provided. Using defaults instead."
                 )
                 ic_params["use_field_for_initial_topo"] = False
+        num_classes = max(
+            len(
+                params["fluvial"]["grain_sizes"],
+                params["fluvial"]["abrasion_coefficients"],
+            )
+        )
+        if not ("grains__weight" in self.grid.at_node.keys()):
+            self.grid.add_array(
+                "soil__depth",
+                np.zeros((self.grid.number_of_nodes, num_classes)),
+                at="node",
+            )
         if not ("soil__depth" in self.grid.at_node.keys()):
             self.grid.add_zeros("soil__depth", at="node")
-            self.grid.at_node["soil__depth"][:] = ic_params["initial_sed_thickness"]
-
         if not ("bedrock__elevation" in self.grid.at_node.keys()):
             self.grid.add_zeros("bedrock__elevation", at="node")
+
         self.topo = self.grid.at_node["topographic__elevation"]
+        self.grains_wt = self.grid.at_node["grains__weight"]
         self.sed = self.grid.at_node["soil__depth"]
         self.rock = self.grid.at_node["bedrock__elevation"]
         if not ic_params["use_field_for_initial_topo"]:
             self.topo[self.grid.core_nodes] = ic_params["initial_topo"] + ic_params[
                 "random_topo_amp"
             ] * np.random.rand(self.grid.number_of_core_nodes)
-        if not ic_params["use_field_for_initial_sed"]:
-            self.sed[self.grid.core_nodes] = ic_params["initial_sed_thickness"]
+        if ic_params["use_field_for_initial_sed_classes"]:
+            if ic_params["use_field_for_initial_sed"]:
+                print("Warning: ignoring use_field_for_initial_sed and")
+                print("overriding sediment thickness field using grains__weight")
+            self.sed[:] = (
+                np.sum(self.grains_wt, axis=1)
+                / (
+                    (1 - params["fluvial"]["sediment_porosity"])
+                    * params["fluvial"]["rho_sed"]
+                )
+            )
+        # ok i'm pausing here for the time being. I don't think we need
+        # both initial_sed_thickness and initial_grains_weight. Just use
+        # grains weight, then the logic is much easier even if the numbers
+        # are more awkward. Also, should use syntactic sugar for rho_s and
+        # and phi, etc.
+        else:
+            if not ic_params["use_field_for_initial_sed"]:
+                self.sed[:] = ic_params["initial_sed_thickness"]
+            for i in range(num_classes):
+                self.grains_wt[:,i] = (
+                    ic_params["initial_sed_thickness"] 
+                    * (1 - params["fluvial"]["sediment_porosity"])
+                    * params["fluvial"]["rho_sed"]
+                )
         self.rock[self.grid.core_nodes] = (
             self.topo[self.grid.core_nodes] - self.sed[self.grid.core_nodes]
         )
-        try: # NOTE: needs to handle case of sed thickness coming as field
+        try:  # NOTE: needs to handle case of sed thickness coming as field
             np.testing.assert_almost_equal(
                 ic_params["init_grains_weight"]
                 / (
@@ -202,7 +238,6 @@ class EgbeLem(LandlabModel):
             plucking_by_tools_flag=egbe_params["plucking_by_tools_flag"],
         )
         print("ei FROG", self.grid.at_node["topographic__elevation"])
-
 
     def update(self, dt=None):
         """Advance the model by one time step of duration dt."""
