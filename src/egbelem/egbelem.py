@@ -20,6 +20,13 @@ from landlab.components.soil_grading import SoilGrading
 from model_base import LandlabModel, verify_input_file_and_load_params
 
 
+# Default factors related to fluvial transport
+EARTH_GRAV_ACCEL = 9.8  # gravitational acceleration at earth's surface, m/s2
+RHO = 1000.0  # density of water, kg/m3
+RHO_SED = 2650.0  # density of sediment grains, kg/m3
+SEDIMENT_POROSITY = 1.0 / 3.0
+
+
 class EgbeLem(LandlabModel):
     """Landscape Evolution Model using fluvial EGBE theory."""
 
@@ -48,7 +55,9 @@ class EgbeLem(LandlabModel):
             "initial_topo": 0.0,
             "random_topo_amp": 10.0,
             "use_field_for_initial_sed_classes": False,
-            "init_grains_weight": np.array([1.0 * 2650.0 * (1.0 - 1.0 / 3.0)]),
+            "init_grains_weight": np.array(
+                [1.0 * EARTH_GRAV_ACCEL * RHO_SED * (1.0 - SEDIMENT_POROSITY)]
+            ),
         },
         "baselevel": {
             "uplift_rate": 0.0001,
@@ -62,16 +71,16 @@ class EgbeLem(LandlabModel):
         },
         "fluvial": {
             "intermittency_factor": 0.01,
-            "transport_coefficient": 0.041,
-            "sediment_porosity": 1.0 / 3.0,
+            "sediment_porosity": SEDIMENT_POROSITY,
             "depth_decay_scale": 1.0,
             "plucking_coefficient": 1.0e-4,
             "epsilon": 0.2,
             "abrasion_coefficients": [1.0e-4],
             "bedrock_abrasion_coefficient": 1.0e-4,
             "fractions_from_plucking": [0.5],
-            "rho_sed": 2650.0,
-            "rho_water": 1000.0,
+            "grav_accel": EARTH_GRAV_ACCEL,
+            "rho_sed": RHO_SED,
+            "rho_water": RHO,
             "use_fixed_width": True,
             "fixed_width_coeff": 0.002,
             "fixed_width_expt": 0.5,
@@ -109,25 +118,25 @@ class EgbeLem(LandlabModel):
         )
         if not ("grains__weight" in self.grid.at_node.keys()):
             self.grid.add_field(
-                "soil__depth",
+                "grains__weight",
                 np.zeros((self.grid.number_of_nodes, num_classes)),
                 at="node",
             )
-            if ic_params["use_field_for_initial_grains_wt"]:
+            if ic_params["use_field_for_initial_sed_classes"]:
                 print(
                     "Warning: you selected the option use_field_for_initial_grains_wt"
                 )
                 print("but no field was provided. Using defaults instead.")
                 ic_params["use_field_for_initial_grains_wt"] = False
-        if not ("soil__depth" in self.grid.at_node.keys()):
-            self.grid.add_zeros("soil__depth", at="node")
-        if not ("bedrock__elevation" in self.grid.at_node.keys()):
-            self.grid.add_zeros("bedrock__elevation", at="node")
+        #if not ("soil__depth" in self.grid.at_node.keys()):
+        #    self.grid.add_zeros("soil__depth", at="node")
+        #if not ("bedrock__elevation" in self.grid.at_node.keys()):
+        #    self.grid.add_zeros("bedrock__elevation", at="node")
 
         self.topo = self.grid.at_node["topographic__elevation"]
-        self.grains_wt = self.grid.at_node["grains__weight"]
-        self.sed = self.grid.at_node["soil__depth"]
-        self.rock = self.grid.at_node["bedrock__elevation"]
+        self.grains_wt = self.grid.at_node["grains__weight"].reshape(
+            (self.grid.number_of_nodes, num_classes)
+        )
 
         if not ic_params["use_field_for_initial_topo"]:
             self.topo[self.grid.core_nodes] = ic_params["initial_topo"] + ic_params[
@@ -135,12 +144,14 @@ class EgbeLem(LandlabModel):
             ] * np.random.rand(self.grid.number_of_core_nodes)
         if not ic_params["use_field_for_initial_sed_classes"]:
             self.grains_wt[:] = ic_params["init_grains_weight"]
-        self.sed[:] = np.sum(self.grains_wt, axis=1) / (
-            (1 - params["fluvial"]["sediment_porosity"]) * params["fluvial"]["rho_sed"]
-        )
-        self.rock[self.grid.core_nodes] = (
-            self.topo[self.grid.core_nodes] - self.sed[self.grid.core_nodes]
-        )
+        #self.sed[:] = np.sum(self.grains_wt, axis=1) / (
+        #    (1.0 - params["fluvial"]["sediment_porosity"])
+        #    * params["fluvial"]["grav_accel"]
+        #    * params["fluvial"]["rho_sed"]
+        #)
+        #self.rock[self.grid.core_nodes] = (
+        #    self.topo[self.grid.core_nodes] - self.sed[self.grid.core_nodes]
+        #)
 
         # Store parameters
         self.uplift_rate = params["baselevel"]["uplift_rate"]
@@ -164,14 +175,13 @@ class EgbeLem(LandlabModel):
                 runoff_rate=flow_params["bankfull_runoff_rate"],
                 depression_finder="DepressionFinderAndRouter",
             )
-        print("BFR", flow_params["bankfull_runoff_rate"])
 
         # Instantiate and initialize components: fluvial transport, erosion, deposition
         egbe_params = params["fluvial"]
         self.soil_grader = SoilGrading(
             self.grid,
             meansizes=egbe_params["grain_sizes"],
-            grains_weight=self.grains_wt,
+            grains_weight="grains__weight",
             phi=egbe_params["sediment_porosity"],
             soil_density=egbe_params["rho_sed"],
         )
@@ -179,7 +189,6 @@ class EgbeLem(LandlabModel):
         self.eroder = ExtendedGravelBedrockEroder(
             self.grid,
             intermittency_factor=egbe_params["intermittency_factor"],
-            transport_coefficient=egbe_params["transport_coefficient"],
             sediment_porosity=egbe_params["sediment_porosity"],
             depth_decay_scale=egbe_params["depth_decay_scale"],
             plucking_coefficient=egbe_params["plucking_coefficient"],
@@ -199,7 +208,9 @@ class EgbeLem(LandlabModel):
             d_min=egbe_params["d_min"],
             plucking_by_tools_flag=egbe_params["plucking_by_tools_flag"],
         )
-        print("ei FROG", self.grid.at_node["topographic__elevation"])
+
+        self.rock = self.grid.at_node["bedrock__elevation"]
+        self.sed = self.grid.at_node["soil__depth"]
 
     def update(self, dt=None):
         """Advance the model by one time step of duration dt."""
