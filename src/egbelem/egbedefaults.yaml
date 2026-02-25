@@ -30,7 +30,6 @@ flow_routing:
   bankfull_runoff_rate: 1.0
 fluvial:
     intermittency_factor: 0.01
-    transport_coefficient: 0.041
     sediment_porosity: 0.3
     depth_decay_scale: 1.0
     plucking_coefficient: 1.0e-4
@@ -38,6 +37,7 @@ fluvial:
     abrasion_coefficients: [1.0e-4]
     bedrock_abrasion_coefficient: 1.0e-4
     fractions_from_plucking: [0.5]
+    grav_accel: 9.8
     rho_sed: 2650.0
     rho_water: 1000.0
     use_fixed_width: True
