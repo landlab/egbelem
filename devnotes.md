@@ -12,7 +12,7 @@
 - [x] if a parameter is omitted from input file or dict, a default will be used
 - [x] Select a raster or hex grid
 - [x] When imported into Python, have option to pass parameters as a dict (which allows having some parameters be spatially varying)
-- [ ] Run from param dict with a predefined grid and fields
+- [x] Run from param dict with a predefined grid and fields
 - [ ] Run from input file with a predefined grid and fields
 - [ ] Output to NetCDF (raster) and VTK (hex or raster) with user control on fields to be included
 - [ ] Reproduce Yuval's example (sim_num_14.pkl)
