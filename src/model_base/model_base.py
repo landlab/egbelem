@@ -48,16 +48,12 @@ def merge_user_and_default_params(user_params, default_params):
     >>> u["grid"]
     {'RasterModelGrid': []}
     """
-    print("DP keys, UP keys", default_params.keys(), user_params.keys())
     for k in default_params.keys():
         #if k in default_params:
         if k not in user_params.keys():
-            print("Adding", k, "to UP")
             user_params[k] = default_params[k]
-        elif isinstance(user_params[k], dict) and k != "create_grid":
-            print("Merging", k)
+        elif isinstance(user_params[k], dict) and k != "grid":
             merge_user_and_default_params(user_params[k], default_params[k])
-    print("At end of merge call, UP is", user_params)
 
 
 def get_or_create_node_field(grid, name, dtype="float64"):
@@ -66,6 +62,38 @@ def get_or_create_node_field(grid, name, dtype="float64"):
         return grid.at_node[name]
     except KeyError:
         return grid.add_zeros(name, at="node", dtype=dtype, clobber=True)
+    
+
+def read_arrays_from_files(params):
+    """
+    Given a parameter dictionary params, identify any items that are dictionaries
+    with the key "_filepath" and replace the item with the contents of the
+    specified file path.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> np.savetxt("test1.txt", np.arange(3))
+    >>> np.savetxt("test2.txt", np.arange(4).reshape((2, 2)))
+    >>> p = {
+    ...     "a": 123,
+    ...     "b": {"c": 456, "d": {"_filepath" : "test1.txt"}},
+    ...     "e": {"_filepath" : "test2.txt"},
+    ... }
+    >>> p = read_arrays_from_files(p)
+    >>> p["b"]["d"]
+    array([0., 1., 2.])
+    >>> p["e"]
+    array([[0., 1.],
+           [2., 3.]])
+    """
+    for item in params:
+        if isinstance(params[item], dict):
+            if "_filepath" in params[item]:
+                params[item] = np.loadtxt(params[item]["_filepath"])
+            else:
+                params[item] = read_arrays_from_files(params[item])
+    return params
 
 
 def _get_pause_time_list_and_next(time_info, clock_dict, no_first_pause=False):
@@ -141,7 +169,6 @@ class LandlabModel:
         self.setup_grid(params["grid"])
         self.setup_for_output(params)
         self.setup_run_control(params["clock"])
-        return params
 
     def setup_grid(self, grid_params: dict) -> None:
         """Load or create the grid.
