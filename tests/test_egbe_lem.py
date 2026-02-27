@@ -94,13 +94,11 @@ def test_run_with_predefined_grid_and_fields():
     )
     gw[4] = (
         SOIL
-        * 1.0 #EgbeLem.DEFAULT_PARAMS["fluvial"]["grav_accel"]
         * EgbeLem.DEFAULT_PARAMS["fluvial"]["rho_sed"]
         * (1.0 - EgbeLem.DEFAULT_PARAMS["fluvial"]["sediment_porosity"])
     )
     rock = grid.add_zeros("bedrock__elevation", at="node")
     rock[:] = TOPO - SOIL
-    print("A gw", gw)
 
     params = {
         "grid": {"source": "grid_object", "grid_object": grid},
@@ -112,15 +110,43 @@ def test_run_with_predefined_grid_and_fields():
     }
 
     model = EgbeLem(params=params)
-    unitweight = (
-        1.0 #EgbeLem.DEFAULT_PARAMS["fluvial"]["grav_accel"]
-        * EgbeLem.DEFAULT_PARAMS["fluvial"]["rho_sed"]
-        * (1.0 - EgbeLem.DEFAULT_PARAMS["fluvial"]["sediment_porosity"])
+    unitmass = EgbeLem.DEFAULT_PARAMS["fluvial"]["rho_sed"] * (
+        1.0 - EgbeLem.DEFAULT_PARAMS["fluvial"]["sediment_porosity"]
     )
     assert_equal(model.grid.at_node["soil__depth"][4], 1.1)
     assert_equal(model.grid.at_node["topographic__elevation"][4], 4.4)
-    assert_almost_equal(model.grid.at_node["grains__weight"][4], 1.1 * unitweight)
+    assert_almost_equal(model.grid.at_node["grains__weight"][4], 1.1 * unitmass)
     assert_almost_equal(model.grid.at_node["bedrock__elevation"][4], 3.3)
+    model.run()
+
+
+def test_run_with_predefined_arrays_from_files():
+
+    params = {}
+    params["fluvial"] = {}
+    params["grid"] = {
+        "source": "create",
+        "create_grid": {
+            "RasterModelGrid": [
+                (3, 3),
+                {"xy_spacing": 1000.0},
+            ],
+        },
+    }
+
+    np.save("testpc", 1.0e-4 * np.arange(9))
+    params["fluvial"]["plucking_coefficient"] = {"_filepath": "testpc.npy"}
+    np.save("testffp", 0.1 * np.arange(9).reshape((9, 1)))
+    params["fluvial"]["fractions_from_plucking"] = {"_filepath": "testffp.npy"}
+    np.save("testbac", 1.0e-4 * np.arange(9))
+    params["fluvial"]["bedrock_abrasion_coefficient"] = {"_filepath": "testbac.npy"}
+
+    model = EgbeLem(params=params)
+    assert_equal(model.eroder._br_abr_coef, 1.0e-4 * np.arange(9))
+    assert_equal(model.eroder._plucking_coef, 1.0e-4 * np.arange(9))
+    assert_equal(
+        model.eroder._fractions_from_plucking, 0.1 * np.arange(9).reshape((9, 1))
+    )
     model.run()
 
 
@@ -131,11 +157,12 @@ def test_input_source_error():
 
 
 if __name__ == "__main__":
-    test_input_source_error()
-    test_run_with_predefined_grid_and_fields()
-    test_pass_fields()
-    test_with_hex_grid()
-    test_combo_specified_and_default_params()
-    test_run_with_default_params_cl()
-    test_run_with_default_params()
-    test_run_pause_continue()
+    test_run_with_predefined_arrays_from_files()
+    # test_input_source_error()
+    # test_run_with_predefined_grid_and_fields()
+    # test_pass_fields()
+    # test_with_hex_grid()
+    # test_combo_specified_and_default_params()
+    # test_run_with_default_params_cl()
+    # test_run_with_default_params()
+    # test_run_pause_continue()
