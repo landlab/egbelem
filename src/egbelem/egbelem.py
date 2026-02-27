@@ -99,7 +99,8 @@ class EgbeLem(LandlabModel):
         if (not isinstance(params, dict)) or (not isinstance(input_file, str)):
             print("params if given must be dict & input_file if given must be str")
             raise (TypeError)
-        params = super().__init__(params, input_file)
+        super().__init__(params, input_file)
+        params = self.params # grab any modifications to params from base class init
 
         # Store global dt
         self._global_dt = params["clock"]["step"]

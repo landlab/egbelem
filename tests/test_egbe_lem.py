@@ -157,12 +157,12 @@ def test_input_source_error():
 
 
 if __name__ == "__main__":
-    test_run_with_predefined_arrays_from_files()
+    # test_run_with_predefined_arrays_from_files()
     # test_input_source_error()
     # test_run_with_predefined_grid_and_fields()
     # test_pass_fields()
     # test_with_hex_grid()
-    # test_combo_specified_and_default_params()
+    test_combo_specified_and_default_params()
     # test_run_with_default_params_cl()
     # test_run_with_default_params()
     # test_run_pause_continue()

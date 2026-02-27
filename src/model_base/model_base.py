@@ -73,19 +73,25 @@ def read_arrays_from_files(params):
     Examples
     --------
     >>> import numpy as np
-    >>> np.savetxt("test1.txt", np.arange(3))
-    >>> np.savetxt("test2.txt", np.arange(4).reshape((2, 2)))
+    >>> np.save("test1", 0.1 * np.arange(3))
+    >>> np.save("test2", np.arange(4).reshape((2, 2)) / 2)
+    >>> np.save("test3", 1.5 * np.arange(3).reshape((3, 1)))
     >>> p = {
     ...     "a": 123,
-    ...     "b": {"c": 456, "d": {"_filepath" : "test1.txt"}},
-    ...     "e": {"_filepath" : "test2.txt"},
+    ...     "b": {"c": 456, "d": {"_filepath" : "test1.npy"}},
+    ...     "e": {"_filepath" : "test2.npy"},
+    ...     "f": {"_filepath" : "test3.npy"}
     ... }
     >>> p = read_arrays_from_files(p)
     >>> p["b"]["d"]
-    array([0., 1., 2.])
+    array([0. , 0.1, 0.2])
     >>> p["e"]
-    array([[0., 1.],
-           [2., 3.]])
+    array([[0. , 0.5],
+           [1. , 1.5]])
+    >>> p["f"]
+    array([[0. ],
+           [1.5],
+           [3. ]])
     """
     for item in params:
         if isinstance(params[item], dict):
@@ -165,12 +171,12 @@ class LandlabModel:
         """Initialize the model."""
         if len(input_file) > 0:
             params = verify_input_file_and_load_params(input_file)
-        merge_user_and_default_params(params, self.DEFAULT_PARAMS)
-        read_arrays_from_files(params)
-        self.setup_grid(params["grid"])
-        self.setup_for_output(params)
-        self.setup_run_control(params["clock"])
-        return params
+        self.params = params
+        merge_user_and_default_params(self.params, self.DEFAULT_PARAMS)
+        read_arrays_from_files(self.params)
+        self.setup_grid(self.params["grid"])
+        self.setup_for_output(self.params)
+        self.setup_run_control(self.params["clock"])
 
     def setup_grid(self, grid_params: dict) -> None:
         """Load or create the grid.
