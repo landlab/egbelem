@@ -52,7 +52,7 @@ def merge_user_and_default_params(user_params, default_params):
         #if k in default_params:
         if k not in user_params.keys():
             user_params[k] = default_params[k]
-        elif isinstance(user_params[k], dict) and k != "grid":
+        elif isinstance(user_params[k], dict) and isinstance(default_params[k], dict) and k != "grid":
             merge_user_and_default_params(user_params[k], default_params[k])
 
 
@@ -90,7 +90,7 @@ def read_arrays_from_files(params):
     for item in params:
         if isinstance(params[item], dict):
             if "_filepath" in params[item]:
-                params[item] = np.loadtxt(params[item]["_filepath"])
+                params[item] = np.load(params[item]["_filepath"])
             else:
                 params[item] = read_arrays_from_files(params[item])
     return params
@@ -161,14 +161,16 @@ class LandlabModel:
         },
     }
 
-    def __init__(self, params: dict={}, input_file: str="") -> None:
+    def __init__(self, params: dict={}, input_file: str="") -> dict:
         """Initialize the model."""
         if len(input_file) > 0:
             params = verify_input_file_and_load_params(input_file)
         merge_user_and_default_params(params, self.DEFAULT_PARAMS)
+        read_arrays_from_files(params)
         self.setup_grid(params["grid"])
         self.setup_for_output(params)
         self.setup_run_control(params["clock"])
+        return params
 
     def setup_grid(self, grid_params: dict) -> None:
         """Load or create the grid.
