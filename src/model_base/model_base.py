@@ -48,16 +48,12 @@ def merge_user_and_default_params(user_params, default_params):
     >>> u["grid"]
     {'RasterModelGrid': []}
     """
-    print("DP keys, UP keys", default_params.keys(), user_params.keys())
     for k in default_params.keys():
         #if k in default_params:
         if k not in user_params.keys():
-            print("Adding", k, "to UP")
             user_params[k] = default_params[k]
-        elif isinstance(user_params[k], dict) and k != "create_grid":
-            print("Merging", k)
+        elif isinstance(user_params[k], dict) and isinstance(default_params[k], dict) and k != "grid":
             merge_user_and_default_params(user_params[k], default_params[k])
-    print("At end of merge call, UP is", user_params)
 
 
 def get_or_create_node_field(grid, name, dtype="float64"):
@@ -66,6 +62,44 @@ def get_or_create_node_field(grid, name, dtype="float64"):
         return grid.at_node[name]
     except KeyError:
         return grid.add_zeros(name, at="node", dtype=dtype, clobber=True)
+    
+
+def read_arrays_from_files(params):
+    """
+    Given a parameter dictionary params, identify any items that are dictionaries
+    with the key "_filepath" and replace the item with the contents of the
+    specified file path.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> np.save("test1", 0.1 * np.arange(3))
+    >>> np.save("test2", np.arange(4).reshape((2, 2)) / 2)
+    >>> np.save("test3", 1.5 * np.arange(3).reshape((3, 1)))
+    >>> p = {
+    ...     "a": 123,
+    ...     "b": {"c": 456, "d": {"_filepath" : "test1.npy"}},
+    ...     "e": {"_filepath" : "test2.npy"},
+    ...     "f": {"_filepath" : "test3.npy"}
+    ... }
+    >>> p = read_arrays_from_files(p)
+    >>> p["b"]["d"]
+    array([0. , 0.1, 0.2])
+    >>> p["e"]
+    array([[0. , 0.5],
+           [1. , 1.5]])
+    >>> p["f"]
+    array([[0. ],
+           [1.5],
+           [3. ]])
+    """
+    for item in params:
+        if isinstance(params[item], dict):
+            if "_filepath" in params[item]:
+                params[item] = np.load(params[item]["_filepath"])
+            else:
+                params[item] = read_arrays_from_files(params[item])
+    return params
 
 
 def _get_pause_time_list_and_next(time_info, clock_dict, no_first_pause=False):
@@ -133,15 +167,16 @@ class LandlabModel:
         },
     }
 
-    def __init__(self, params: dict={}, input_file: str="") -> None:
+    def __init__(self, params: dict={}, input_file: str="") -> dict:
         """Initialize the model."""
         if len(input_file) > 0:
             params = verify_input_file_and_load_params(input_file)
-        merge_user_and_default_params(params, self.DEFAULT_PARAMS)
-        self.setup_grid(params["grid"])
-        self.setup_for_output(params)
-        self.setup_run_control(params["clock"])
-        return params
+        self.params = params
+        merge_user_and_default_params(self.params, self.DEFAULT_PARAMS)
+        read_arrays_from_files(self.params)
+        self.setup_grid(self.params["grid"])
+        self.setup_for_output(self.params)
+        self.setup_run_control(self.params["clock"])
 
     def setup_grid(self, grid_params: dict) -> None:
         """Load or create the grid.
