@@ -13,7 +13,7 @@
 - [x] Select a raster or hex grid
 - [x] When imported into Python, have option to pass parameters as a dict (which allows having some parameters be spatially varying)
 - [x] Run from param dict with a predefined grid and fields
-- [ ] Run from input file with a predefined grid and fields
+- [x] Run from input file with a predefined array inputs
 - [ ] Output to NetCDF (raster) and VTK (hex or raster) with user control on fields to be included
 - [ ] Reproduce Yuval's example (sim_num_14.pkl)
 
@@ -23,6 +23,7 @@
 - [ ] Restart capability: option to restart from a previous run, preserving all fields, parameters, etc.
 - [ ] Have a collection of basic tutorials
 - [ ] Include the examples from the All About EGBE paper
+- [ ] Read a grid and any/all fields from a landlab grid file
 
 ### Icing on the cake 
 

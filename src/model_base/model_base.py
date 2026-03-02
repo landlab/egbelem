@@ -11,6 +11,8 @@ import sys
 import numpy as np
 from landlab import ModelGrid, create_grid, load_params
 from landlab.io.native_landlab import load_grid, save_grid
+from landlab.io.legacy_vtk import write_legacy_vtk
+from landlab.io.netcdf import write_netcdf
 
 
 def verify_input_file_and_load_params(input_file):
@@ -260,6 +262,22 @@ class LandlabModel:
             self.plot_num = 0  # current plot image frame number
         self.display_params = params
 
+        if "format" in op_params:
+            save_fmt = op_params["format"]
+        else:
+            save_fmt = "grid"
+
+        if save_fmt == "grid":
+            self.save_state = self.save_state_grid_format
+        elif save_fmt == "vtk":
+            self.save_state = self.save_state_vtk_format
+        elif save_fmt == "netcdf":
+            self.save_state = self.save_state_netcdf_format
+        else:
+            print("Unrecognized save format '" + save_fmt + "'.")
+            print("Valid formats are: grid, vtk, netcdf")
+            raise ValueError
+
     def setup_run_control(self, clock_params):
         """Initialize variables related to control of run timing."""
         self.run_duration = clock_params["stop"] - clock_params["start"]
@@ -274,13 +292,29 @@ class LandlabModel:
         """Virtual function for plotting; to be overridden."""
         print("Base class placeholder for plot() at time", current_time)
 
-    def save_state(self, save_path, save_num, ndigits):
+    def save_state_grid_format(self, save_path, save_num, ndigits):
         """
-        Save the grid and its fields.
+        Save the grid and its fields in native Landlab format.
 
         Override this function to add to or modify what gets saved.
         """
         save_grid(self.grid, save_path + str(save_num).zfill(ndigits) + ".grid", clobber=True)
+
+    def save_state_vtk_format(self, save_path, save_num, ndigits):
+        """
+        Save grid fields in legacy VTK format.
+
+        Override this function to add to or modify what gets saved.
+        """
+        write_legacy_vtk(save_path + str(save_num).zfill(ndigits) + ".grid", self.grid, clobber=True)
+
+    def save_state_netcdf_format(self, save_path, save_num, ndigits):
+        """
+        Save grid fields in NetCDF format.
+
+        Override this function to add to or modify what gets saved.
+        """
+        write_netcdf(save_path + str(save_num).zfill(ndigits) + ".grid", self.grid, clobber=True)
 
     def update(self, dt):
         """Advance the model by one time step of duration dt."""
