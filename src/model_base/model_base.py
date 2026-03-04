@@ -32,6 +32,7 @@ def verify_input_file_and_load_params(input_file):
     except FileNotFoundError:
         raise
 
+
 def merge_user_and_default_params(user_params, default_params):
     """Merge default parameters into the user-parameter dictionary, adding
     defaults where user values are absent.
@@ -51,10 +52,14 @@ def merge_user_and_default_params(user_params, default_params):
     {'RasterModelGrid': []}
     """
     for k in default_params.keys():
-        #if k in default_params:
+        # if k in default_params:
         if k not in user_params.keys():
             user_params[k] = default_params[k]
-        elif isinstance(user_params[k], dict) and isinstance(default_params[k], dict) and k != "grid":
+        elif (
+            isinstance(user_params[k], dict)
+            and isinstance(default_params[k], dict)
+            and k != "grid"
+        ):
             merge_user_and_default_params(user_params[k], default_params[k])
 
 
@@ -64,7 +69,7 @@ def get_or_create_node_field(grid, name, dtype="float64"):
         return grid.at_node[name]
     except KeyError:
         return grid.add_zeros(name, at="node", dtype=dtype, clobber=True)
-    
+
 
 def read_arrays_from_files(params):
     """
@@ -132,9 +137,7 @@ def _get_pause_time_list_and_next(time_info, clock_dict, no_first_pause=False):
         if no_first_pause:
             start += time_info
         pause_times = list(
-            np.arange(
-                start, clock_dict["stop"] + 2 * time_info, time_info
-            )
+            np.arange(start, clock_dict["stop"] + 2 * time_info, time_info)
         )
     elif isinstance(time_info, list):
         pause_times = time_info.copy()
@@ -169,7 +172,7 @@ class LandlabModel:
         },
     }
 
-    def __init__(self, params: dict={}, input_file: str="") -> dict:
+    def __init__(self, params: dict = {}, input_file: str = "") -> dict:
         """Initialize the model."""
         if len(input_file) > 0:
             params = verify_input_file_and_load_params(input_file)
@@ -298,7 +301,9 @@ class LandlabModel:
 
         Override this function to add to or modify what gets saved.
         """
-        save_grid(self.grid, save_path + str(save_num).zfill(ndigits) + ".grid", clobber=True)
+        save_grid(
+            self.grid, save_path + str(save_num).zfill(ndigits) + ".grid", clobber=True
+        )
 
     def save_state_vtk_format(self, save_path, save_num, ndigits):
         """
@@ -306,7 +311,9 @@ class LandlabModel:
 
         Override this function to add to or modify what gets saved.
         """
-        write_legacy_vtk(save_path + str(save_num).zfill(ndigits) + ".grid", self.grid, clobber=True)
+        write_legacy_vtk(
+            save_path + str(save_num).zfill(ndigits) + ".vtk", self.grid, clobber=True
+        )
 
     def save_state_netcdf_format(self, save_path, save_num, ndigits):
         """
@@ -314,7 +321,7 @@ class LandlabModel:
 
         Override this function to add to or modify what gets saved.
         """
-        write_netcdf(save_path + str(save_num).zfill(ndigits) + ".grid", self.grid, clobber=True)
+        write_netcdf(save_path + str(save_num).zfill(ndigits) + ".nc", self.grid)
 
     def update(self, dt):
         """Advance the model by one time step of duration dt."""
