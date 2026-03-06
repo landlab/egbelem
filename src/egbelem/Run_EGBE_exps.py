@@ -23,15 +23,15 @@ with open(f'sim_num_{sim_id_to_run}.pkl', 'rb') as f:
     loaded_dict = pickle.load(f)
 
 # GT temporary, for testing
-loaded_dict["total_time"] = 100001
-for item in loaded_dict.keys():
-    try:
-        ilen = len(item)
-    except:
-        ilen = 1
-    if ilen < 100:
-        print(item, loaded_dict[item])
-exit()
+#loaded_dict["total_time"] = 100001
+#for item in loaded_dict.keys():
+#    try:
+#        ilen = len(item)
+#    except:
+#        ilen = 1
+#    if ilen < 100:
+#        print(item, loaded_dict[item])
+#exit()
 
 # Init components
 grid = loaded_dict['grid']
@@ -63,7 +63,7 @@ eroder = ExtendedGravelBedrockEroder(grid,
                                      fractions_from_plucking=loaded_dict['proportions'],
                                      rho_sed=loaded_dict['rho_sed'],
                                      rho_water=loaded_dict['rho_water'],
-                                     fixed_width_flag=loaded_dict['fixed_width_flag'],
+                                     use_fixed_width=loaded_dict['fixed_width_flag'],
                                      fixed_width_coeff=loaded_dict['fixed_width_coeff'],
                                      fixed_width_expt=loaded_dict['fixed_width_expt'],
                                      mannings_n=loaded_dict['mannings_n'],
