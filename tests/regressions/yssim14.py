@@ -18,18 +18,16 @@ params = {
     "grid": {
         "source": "create",
         "create_grid": {
-            "RasterModelGrid": [
-                (100, 3),
-                {"xy_spacing": 500.0},
-                {
-                    "bc": {
-                        "right": "closed",
-                        "top": "closed",
-                        "left": "closed",
-                        "bottom": "open",
-                    },
-                },
-            ],
+            "RasterModelGrid": {
+                "shape": (100, 3),
+                "xy_spacing": 500.,
+                "bc": {
+                    "right": "closed",
+                    "top": "closed",
+                    "left": "closed",
+                    "bottom": "open",
+                }
+            }
         },
     },
     "clock": {"start": 0.0, "stop": 4.0e7, "step": 100.0},
